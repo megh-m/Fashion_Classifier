@@ -1,0 +1,221 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .prediction-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .confidence-bar {
+            height: 20px;
+            background-color: #28a745;
+            border-radius: 3px;
+        }
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+        }
+        #drop-area.highlight {
+            border-color: purple;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Fashion Item Classifier</h1>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div id="drop-area">
+                    <form class="upload-form">
+                        <p>Upload a fashion item image or drag it here</p>
+                        <input type="file" id="fileElem" accept="image/*" onchange="handleFiles(this.files)">
+                        <label class="button btn btn-primary" for="fileElem">Select an image</label>
+                    </form>
+                </div>
+                
+                <div id="gallery" class="mt-4 text-center"></div>
+                
+                <div id="prediction-result" class="prediction-box d-none">
+                    <h3 class="text-center mb-3">Prediction Result</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Predicted Class:</strong> <span id="predicted-class"></span></p>
+                            <p><strong>Confidence:</strong> <span id="confidence"></span>%</p>
+                            <div class="progress">
+                                <div id="confidence-bar" class="confidence-bar" style="width: 0%"></div>
+                            </div>
+                            <p class="mt-2"><strong>Processing Time:</strong> <span id="processing-time"></span> ms</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p>Is this prediction correct?</p>
+                            <button class="btn btn-success" onclick="submitFeedback(true)">Yes</button>
+                            <button class="btn btn-danger" onclick="showFeedbackForm()">No</button>
+                            
+                            <div id="feedback-form" class="mt-3 d-none">
+                                <select id="actual-class" class="form-select mb-2">
+                                    <option value="">Select actual class</option>
+                                    <option value="T-shirt/top">T-shirt/top</option>
+                                    <option value="Trouser">Trouser</option>
+                                    <option value="Pullover">Pullover</option>
+                                    <option value="Dress">Dress</option>
+                                    <option value="Coat">Coat</option>
+                                    <option value="Sandal">Sandal</option>
+                                    <option value="Shirt">Shirt</option>
+                                    <option value="Sneaker">Sneaker</option>
+                                    <option value="Bag">Bag</option>
+                                    <option value="Ankle boot">Ankle boot</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="submitFeedback(false)">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentImageId = null;
+        
+        // Set up drag and drop
+        let dropArea = document.getElementById('drop-area');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('highlight');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('highlight');
+        }
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+        
+        function handleFiles(files) {
+            if (files.length > 0) {
+                uploadFile(files[0]);
+                previewFile(files[0]);
+            }
+        }
+        
+        function previewFile(file) {
+            let reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = function() {
+                let img = document.createElement('img');
+                img.src = reader.result;
+                img.className = 'img-fluid';
+                img.style.maxHeight = '300px';
+                document.getElementById('gallery').innerHTML = '';
+                document.getElementById('gallery').appendChild(img);
+            }
+        }
+        
+        function uploadFile(file) {
+            let formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('http://localhost:5001/predict/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayPrediction(data);
+                currentImageId = data.filename;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during prediction. Please try again.');
+            });
+        }
+        
+        function displayPrediction(data) {
+            document.getElementById('predicted-class').textContent = data.predicted_class;
+            document.getElementById('confidence').textContent = data.confidence.toFixed(2);
+            document.getElementById('confidence-bar').style.width = `${data.confidence}%`;
+            document.getElementById('processing-time').textContent = data.prediction_time_ms.toFixed(2);
+            document.getElementById('prediction-result').classList.remove('d-none');
+        }
+        
+        function showFeedbackForm() {
+            document.getElementById('feedback-form').classList.remove('d-none');
+        }
+        
+        function submitFeedback(isCorrect) {
+            if (!currentImageId) return;
+            
+            const predictedClass = document.getElementById('predicted-class').textContent;
+
+            let data = {
+                image_id: currentImageId,
+                is_correct: isCorrect,
+                predicted_class: predictedClass
+            };
+            
+            if (!isCorrect) {
+                let actualClass = document.getElementById('actual-class').value;
+                if (!actualClass) {
+                    alert('Please select the actual class');
+                    return;
+                }
+                data.actual_class = actualClass;
+            }
+            
+            fetch('http://localhost:5001/feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {throw err;});
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Thank you for your feedback!');
+                document.getElementById('feedback-form').classList.add('d-none');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(`Error: ${error.detail || error.message}`);
+            });
+        }
+    </script>
+</body>
+</html>

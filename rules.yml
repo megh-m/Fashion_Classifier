@@ -1,0 +1,11 @@
+groups:
+- name: drift_alerts
+  rules:
+  - alert: DataDriftDetected
+    expr: data_drift_score > 0.5
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: Significant data drift detected
+      description: "Drift score {{ $value }} exceeds threshold"

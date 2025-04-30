@@ -1,0 +1,45 @@
+# docker-compose.yml
+#version: '3'
+
+services:
+  fashion-classifier-api:
+    build: .
+    ports:
+      - "5001:5001"  # REST API
+      - "8001:8001"  # Prometheus metrics
+    volumes:
+      - ./data:/app/data:z  # Mount data directory
+      - ./models:/app/models:z  # Mount models directory
+      - ./temp:/app/temp:z
+    environment:
+      - UMASK=002
+      - UPLOAD_DIR=/app/data/user-images
+      - DVC_API_KEY=your-secret-key
+      - RELOAD_KEY=your-secret-key
+      - RETRAIN_API_KEY=your-secret-key  # Set this securely in production
+
+  retraining-service:
+    build: .
+    command: python retrain.py
+    network_mode: "host"
+    volumes:
+      - ./data:/app/data  # Mount data directory
+      - ./models:/app/models  # Mount models directory
+      - ./temp:/app/temp:z
+    depends_on:
+      - fashion-classifier-api
+    environment:
+      - UMASK=002
+      - DVC_API_KEY=your-secret-key
+      - API_HOST=ai_app_ra-fashion-classifier-api
+      - RELOAD_KEY=your-secret-key
+      - RETRAIN_API_KEY=your-secret-key  
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - fashion-classifier-api
