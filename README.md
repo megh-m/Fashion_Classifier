@@ -6,7 +6,7 @@
 - [3 High-Level Design Document](#3-high-level-design)
 - [4 Low-Level Design Document](#4-low-level-design)
 - [5. User Manual](#5-user-manual)
-- [6. Troubleshooting Guide](#7-troubleshooting-guide)
+- [6. Troubleshooting Guide](#6-troubleshooting-guide)
   
 ## 1. Architecture Diagram
 
@@ -145,7 +145,7 @@ docker-compose up -d --build
      - Model accuracy trends
      - System resource usage
      - Data drift alerts
-## 7. Troubleshooting Guide
+## 6. Troubleshooting Guide
 
 ### Common Errors and Solutions
 
