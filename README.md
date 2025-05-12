@@ -135,6 +135,17 @@ docker-compose up -d --build
    - Monitor real-time accuracy metrics
    - View system health indicators
 
+5. **Setting up Periodic Retraining**
+   - Add a Crontab entry to run the retraining service docker container at a specified time of day
+     ```
+     crontab -e
+     ```
+     Then add
+     ```
+     MM HH * * * cd <File_Path to Unzip Location> && docker start ai_app_ra-retraining-service-1
+     ```
+     This will run the retraining service at HH:MM hrs local time everyday
+
 **For Administrators:**
 1. **Access Grafana Dashboard**
    - Setup Grafana on your system locally without docker 
